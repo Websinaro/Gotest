@@ -9,9 +9,9 @@ import (
 )
 
 const (
-	weatherURL     = "https://api.open-meteo.com/v1/forecast"
-	airQualityURL  = "https://air-quality-api.open-meteo.com/v1/air-quality"
-	geocodeURL     = "https://geocoding-api.open-meteo.com/v1/reverse"
+	weatherURL    = "https://api.open-meteo.com/v1/forecast"
+	airQualityURL = "https://air-quality-api.open-meteo.com/v1/air-quality"
+	geocodeURL    = "https://geocoding-api.open-meteo.com/v1/reverse"
 )
 
 var httpClient = &http.Client{Timeout: 15 * time.Second}
@@ -72,12 +72,12 @@ type WeatherResult struct {
 // FetchWeather mirrors fetch_weather(lat, lon) in services/weather_service.py.
 func FetchWeather(lat, lon float64) (*WeatherResult, error) {
 	weatherParams := map[string]string{
-		"latitude":  fmt.Sprintf("%v", lat),
-		"longitude": fmt.Sprintf("%v", lon),
-		"current":   "temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,rain,weather_code,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m,uv_index,is_day",
-		"hourly":    "temperature_2m,relative_humidity_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,uv_index,dew_point_2m,visibility",
-		"daily":     "weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,sunrise,sunset,uv_index_max,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max",
-		"timezone":  "Asia/Kolkata",
+		"latitude":      fmt.Sprintf("%v", lat),
+		"longitude":     fmt.Sprintf("%v", lon),
+		"current":       "temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,rain,weather_code,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m,uv_index,is_day",
+		"hourly":        "temperature_2m,relative_humidity_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_gusts_10m,uv_index,dew_point_2m,visibility",
+		"daily":         "weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,sunrise,sunset,uv_index_max,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max",
+		"timezone":      "Asia/Kolkata",
 		"forecast_days": "7",
 	}
 	airParams := map[string]string{

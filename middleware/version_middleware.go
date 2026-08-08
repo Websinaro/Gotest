@@ -10,11 +10,11 @@ import (
 )
 
 var versionExemptPaths = map[string]bool{
-	"/":            true,
-	"/docs":        true,
-	"/redoc":       true,
+	"/":             true,
+	"/docs":         true,
+	"/redoc":        true,
 	"/openapi.json": true,
-	"/app/version": true,
+	"/app/version":  true,
 }
 
 // compareVersions returns -1, 0, or 1 comparing dot-separated numeric
@@ -76,8 +76,8 @@ func VersionCheckMiddleware(next http.Handler) http.Handler {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(426) // 426 Upgrade Required
 				json.NewEncoder(w).Encode(map[string]interface{}{
-					"error":                "update_required",
-					"message":              config.ForceUpdateMessage,
+					"error":                 "update_required",
+					"message":               config.ForceUpdateMessage,
 					"min_supported_version": config.MinSupportedVersion,
 					"latest_version":        config.LatestVersion,
 				})
