@@ -1,4 +1,4 @@
-name: Generate Go Modules
+name: Generate Go Module Files
 
 on:
   push:
@@ -12,55 +12,91 @@ permissions:
   contents: write
 
 jobs:
-  go-mod:
+  generate-go-mod:
+    name: Generate go.mod and go.sum
     runs-on: ubuntu-latest
 
     steps:
+      # 1. Download repository
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Detect Go project
-        id: detect
-        run: |
-          if find . -name "*.go" -not -path "./.git/*" | grep -q .; then
-            echo "go_project=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "go_project=false" >> "$GITHUB_OUTPUT"
-          fi
-
+      # 2. Install Go
       - name: Setup Go
-        if: steps.detect.outputs.go_project == 'true'
         uses: actions/setup-go@v5
         with:
-          go-version: "stable"
+          go-version: "1.22"
           cache: true
 
-      - name: Create go.mod if missing
-        if: steps.detect.outputs.go_project == 'true'
+      # 3. Check that Go source exists
+      - name: Check Go project
         run: |
-          if [ ! -f go.mod ]; then
-            go mod init webalert
+          if ! find . -name "*.go" -not -path "./.git/*" | grep -q .; then
+            echo "No Go source files found."
+            exit 1
           fi
 
-      - name: Generate go.sum and clean dependencies
-        if: steps.detect.outputs.go_project == 'true'
+      # 4. Remove existing module files
+      - name: Remove existing Go module files
+        run: |
+          rm -f go.mod
+          rm -f go.sum
+
+      # 5. Create fresh go.mod
+      - name: Initialize Go module
+        run: |
+          go mod init kabackend
+
+      # 6. Automatically discover dependencies
+      #    and generate go.sum
+      - name: Generate go.mod and go.sum
         run: |
           go mod tidy
 
+      # 7. Display generated files
+      - name: Show generated module files
+        run: |
+          echo "===================="
+          echo "go.mod"
+          echo "===================="
+          cat go.mod
+
+          echo ""
+          echo "===================="
+          echo "go.sum"
+          echo "===================="
+          cat go.sum
+
+      # 8. Verify dependency checksums
       - name: Verify dependencies
-        if: steps.detect.outputs.go_project == 'true'
         run: |
           go mod verify
 
-      - name: Test Go project
-        if: steps.detect.outputs.go_project == 'true'
+      # 9. Download dependencies
+      - name: Download dependencies
+        run: |
+          go mod download
+
+      # 10. Test the entire Go project
+      - name: Run Go tests
         run: |
           go test ./...
 
-      - name: Commit generated module files
-        if: steps.detect.outputs.go_project == 'true'
+      # 11. Check formatting
+      - name: Check Go formatting
+        run: |
+          files=$(gofmt -l .)
+
+          if [ -n "$files" ]; then
+            echo "The following Go files are not formatted:"
+            echo "$files"
+            exit 1
+          fi
+
+      # 12. Commit generated files
+      - name: Commit go.mod and go.sum
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -68,8 +104,8 @@ jobs:
           git add go.mod go.sum
 
           if git diff --cached --quiet; then
-            echo "No changes to go.mod or go.sum."
+            echo "No changes to commit."
           else
-            git commit -m "chore: update Go module files"
+            git commit -m "chore: regenerate Go module files"
             git push
           fi
