@@ -13,11 +13,11 @@ import (
 // Paths that must stay plain JSON — Swagger/OpenAPI need to read these
 // directly, and "/" is a manual health-check people hit in a browser.
 var encryptionExcludedPaths = map[string]bool{
-	"/docs":        true,
-	"/redoc":       true,
+	"/docs":         true,
+	"/redoc":        true,
 	"/openapi.json": true,
-	"/":            true,
-	"/app/version": true,
+	"/":             true,
+	"/app/version":  true,
 }
 
 // responseBuffer captures everything a handler writes so the middleware can

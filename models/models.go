@@ -47,14 +47,14 @@ type DeviceToken struct {
 
 // Notification mirrors the `notifications` table / model.Notification.
 type Notification struct {
-	ID             int64
-	Title          string
-	Message        string
-	Severity       string
-	District       *string
-	CreatedBy      int64
-	CreatedByName  string
-	Active         bool
-	CreatedTime    string
-	UpdatedTime    string
+	ID            int64
+	Title         string
+	Message       string
+	Severity      string
+	District      *string
+	CreatedBy     int64
+	CreatedByName string
+	Active        bool
+	CreatedTime   string
+	UpdatedTime   string
 }
