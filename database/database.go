@@ -3,6 +3,9 @@ package database
 import (
 	"database/sql"
 	"log"
+	"os"
+	"strconv"
+	"time"
 
 	_ "github.com/lib/pq"
 
@@ -11,13 +14,37 @@ import (
 
 var DB *sql.DB
 
+func getEnvInt(key string, fallback int) int {
+	if v := os.Getenv(key); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			return n
+		}
+	}
+	return fallback
+}
+
 // Connect opens the Postgres connection pool (equivalent of
 // sqlalchemy.create_engine + sessionmaker) and stores it in DB.
+//
+// Pool limits mirror SQLAlchemy's defaults (pool_size=5, max_overflow=10,
+// i.e. 15 connections open at most) so the Go service can't fan out to more
+// Postgres connections under load than the Python service ever did.
+// Override via DB_MAX_OPEN_CONNS / DB_MAX_IDLE_CONNS / DB_CONN_MAX_LIFETIME_MIN
+// if a deployment needs different limits.
 func Connect() {
 	db, err := sql.Open("postgres", config.DatabaseURL)
 	if err != nil {
 		log.Fatalf("failed to open database: %v", err)
 	}
+
+	maxOpen := getEnvInt("DB_MAX_OPEN_CONNS", 15) // SQLAlchemy pool_size(5) + max_overflow(10)
+	maxIdle := getEnvInt("DB_MAX_IDLE_CONNS", 5)   // SQLAlchemy pool_size
+	maxLifetimeMin := getEnvInt("DB_CONN_MAX_LIFETIME_MIN", 30)
+
+	db.SetMaxOpenConns(maxOpen)
+	db.SetMaxIdleConns(maxIdle)
+	db.SetConnMaxLifetime(time.Duration(maxLifetimeMin) * time.Minute)
+
 	if err := db.Ping(); err != nil {
 		log.Fatalf("failed to connect to database: %v", err)
 	}

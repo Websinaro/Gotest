@@ -71,14 +71,36 @@ func sendMessage(fcmToken string, data map[string]string) error {
 // returned, matching the Python function's best-effort `except Exception`.
 func SendSosPush(fcmToken string, sosID int64, senderName string, latitude, longitude float64) {
 	err := sendMessage(fcmToken, map[string]string{
-		"type":        "sos_alert",
-		"sos_id":      fmt.Sprintf("%d", sosID),
+		"type":       "sos_alert",
+		"sos_id":     fmt.Sprintf("%d", sosID),
 		"sender_name": senderName,
-		"latitude":    fmt.Sprintf("%v", latitude),
-		"longitude":   fmt.Sprintf("%v", longitude),
+		"latitude":   fmt.Sprintf("%v", latitude),
+		"longitude":  fmt.Sprintf("%v", longitude),
 	})
 	if err != nil {
 		log.Printf("[SOS PUSH ERROR] token=%s error=%v", fcmToken, err)
+	}
+}
+
+// SendSosResolvedPush tells a protector's device that an SOS they were
+// watching has been marked safe. The app uses this to cancel the ongoing,
+// non-dismissible local notification for that alert.
+//
+// Without this, the "EMERGENCY: X needs help" notification (posted with
+// ongoing:true/autoCancel:false so it can't be swiped away by accident)
+// just sits in the tray forever once resolved. On several Android builds a
+// full-screen-intent notification is suppressed while an earlier one from
+// the same app is still showing/ongoing - so the very next real SOS to the
+// same phone can silently fail to alert (no heads-up, no sound) even
+// though the FCM message was delivered and technically "worked". Clearing
+// the stale notification the moment the alert resolves closes that gap.
+func SendSosResolvedPush(fcmToken string, sosID int64) {
+	err := sendMessage(fcmToken, map[string]string{
+		"type":   "sos_resolved",
+		"sos_id": fmt.Sprintf("%d", sosID),
+	})
+	if err != nil {
+		log.Printf("[SOS RESOLVED PUSH ERROR] token=%s error=%v", fcmToken, err)
 	}
 }
 

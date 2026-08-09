@@ -10,12 +10,19 @@ import (
 )
 
 var versionExemptPaths = map[string]bool{
-	"/":             true,
-	"/docs":         true,
-	"/redoc":        true,
+	"/":            true,
+	"/docs":        true,
+	"/redoc":       true,
 	"/openapi.json": true,
-	"/app/version":  true,
+	"/app/version": true,
 }
+
+// wsPathPrefix mirrors the same exemption in EncryptionMiddleware. A
+// WebSocket handshake is issued by the platform's WS client (not our own
+// http.Client wrapper), so it won't reliably carry the custom
+// X-App-Version header the way a normal REST call does - don't block the
+// SOS live-location socket over a header a WS client can't easily set.
+const wsPathPrefix = "/ws/"
 
 // compareVersions returns -1, 0, or 1 comparing dot-separated numeric
 // version strings (e.g. "2.2.8" vs "3.0.1"), mirroring the ordering
@@ -60,7 +67,7 @@ func compareVersions(a, b string) (int, bool) {
 // VersionCheckMiddleware mirrors middleware/version_middleware.py.
 func VersionCheckMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if versionExemptPaths[r.URL.Path] {
+		if versionExemptPaths[r.URL.Path] || strings.HasPrefix(r.URL.Path, wsPathPrefix) {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -76,8 +83,8 @@ func VersionCheckMiddleware(next http.Handler) http.Handler {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(426) // 426 Upgrade Required
 				json.NewEncoder(w).Encode(map[string]interface{}{
-					"error":                 "update_required",
-					"message":               config.ForceUpdateMessage,
+					"error":                "update_required",
+					"message":              config.ForceUpdateMessage,
 					"min_supported_version": config.MinSupportedVersion,
 					"latest_version":        config.LatestVersion,
 				})

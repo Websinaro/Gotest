@@ -211,6 +211,13 @@ func UpdateSosLocationHandler(w http.ResponseWriter, r *http.Request) {
 	alert.Latitude = body.Latitude
 	alert.Longitude = body.Longitude
 
+	// This REST endpoint stays as the reliable fallback path for when the
+	// WebSocket is down (poor 2G/3G connectivity), but any protector who
+	// does have a live socket open should still see the update instantly
+	// rather than waiting for their own next poll - so mirror it into the
+	// same hub the WS handler broadcasts from.
+	services.GlobalSosHub.BroadcastLocation(sosID, body.Latitude, body.Longitude, 0, 0, 0, utils.PyUTCNowStr(), nil)
+
 	writeJSON(w, http.StatusOK, sosToOut(alert))
 }
 
@@ -246,6 +253,39 @@ func ResolveSosHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	alert.Status = "resolved"
 	alert.ResolvedTime = &resolvedTime
+
+	// Let any open WebSocket (sender's own app, protectors' live map
+	// screens) know immediately, and close out that room.
+	services.GlobalSosHub.BroadcastResolved(sosID, resolvedTime)
+
+	// Also push a "sos_resolved" FCM message to every protector so their
+	// app cancels the stale ongoing notification even if they don't have
+	// the live map open right now (background/killed app) - see the doc
+	// comment on SendSosResolvedPush for why this matters for notification
+	// reliability on the next SOS.
+	contacts, err := getSafetyContactsForUser(user.ID)
+	if err == nil {
+		protectors, err := findProtectorUsers(contacts)
+		if err == nil {
+			for _, protector := range protectors {
+				rows, err := database.DB.Query(`SELECT fcm_token FROM device_tokens WHERE user_id = $1`, protector.ID)
+				if err != nil {
+					continue
+				}
+				var tokens []string
+				for rows.Next() {
+					var t string
+					if rows.Scan(&t) == nil {
+						tokens = append(tokens, t)
+					}
+				}
+				rows.Close()
+				for _, token := range tokens {
+					services.SendSosResolvedPush(token, sosID)
+				}
+			}
+		}
+	}
 
 	writeJSON(w, http.StatusOK, sosToOut(alert))
 }

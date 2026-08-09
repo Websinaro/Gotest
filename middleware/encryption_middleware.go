@@ -13,11 +13,11 @@ import (
 // Paths that must stay plain JSON — Swagger/OpenAPI need to read these
 // directly, and "/" is a manual health-check people hit in a browser.
 var encryptionExcludedPaths = map[string]bool{
-	"/docs":         true,
-	"/redoc":        true,
+	"/docs":        true,
+	"/redoc":       true,
 	"/openapi.json": true,
-	"/":             true,
-	"/app/version":  true,
+	"/":            true,
+	"/app/version": true,
 }
 
 // responseBuffer captures everything a handler writes so the middleware can
@@ -52,6 +52,18 @@ func (b *responseBuffer) Write(p []byte) (int, error) {
 func EncryptionMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if encryptionExcludedPaths[r.URL.Path] {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		// WebSocket upgrades must reach the handler with the original
+		// http.ResponseWriter intact so it can be type-asserted to
+		// http.Hijacker - the responseBuffer below doesn't implement that
+		// interface, so wrapping it here would make every /ws/ connection
+		// fail to upgrade. WS payloads aren't run through this JSON
+		// encrypt/decrypt envelope at all; they rely on wss:// (TLS) for
+		// transport security, same as any other WebSocket deployment.
+		if strings.HasPrefix(r.URL.Path, "/ws/") {
 			next.ServeHTTP(w, r)
 			return
 		}

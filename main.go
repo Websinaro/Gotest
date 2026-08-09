@@ -4,11 +4,13 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"kabackend/database"
 	"kabackend/middleware"
 	"kabackend/routes"
 	"kabackend/security"
+	"kabackend/services"
 )
 
 func mux() *http.ServeMux {
@@ -40,6 +42,9 @@ func mux() *http.ServeMux {
 	m.HandleFunc("PATCH /sos/{id}/location", routes.UpdateSosLocationHandler)
 	m.HandleFunc("POST /sos/{id}/resolve", routes.ResolveSosHandler)
 
+	// SOS live location (WebSocket) - see services/ws_hub.go
+	m.HandleFunc("GET /ws/sos/{id}", routes.SosLocationWebSocketHandler)
+
 	// Device token
 	m.HandleFunc("POST /device-token", routes.RegisterDeviceTokenHandler)
 
@@ -67,7 +72,17 @@ func main() {
 		log.Fatalf("failed to initialize AES key: %v", err)
 	}
 
-	handler := middleware.VersionCheckMiddleware(middleware.EncryptionMiddleware(mux()))
+	// Keepalive-ping every open SOS WebSocket so dead connections on flaky
+	// 2G/3G links get pruned promptly instead of hanging half-open.
+	services.GlobalSosHub.StartKeepalive(20 * time.Second)
+
+	handler := middleware.RecoveryMiddleware(
+		middleware.CORSMiddleware(
+			middleware.VersionCheckMiddleware(
+				middleware.EncryptionMiddleware(mux()),
+			),
+		),
+	)
 
 	port := os.Getenv("PORT")
 	if port == "" {
