@@ -38,7 +38,7 @@ func Connect() {
 	}
 
 	maxOpen := getEnvInt("DB_MAX_OPEN_CONNS", 15) // SQLAlchemy pool_size(5) + max_overflow(10)
-	maxIdle := getEnvInt("DB_MAX_IDLE_CONNS", 5)  // SQLAlchemy pool_size
+	maxIdle := getEnvInt("DB_MAX_IDLE_CONNS", 5)   // SQLAlchemy pool_size
 	maxLifetimeMin := getEnvInt("DB_CONN_MAX_LIFETIME_MIN", 30)
 
 	db.SetMaxOpenConns(maxOpen)

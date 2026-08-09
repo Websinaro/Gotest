@@ -136,21 +136,21 @@ type PresidentDashboard struct {
 // ---- scheme/weather_scheme.py ----
 
 type CurrentWeather struct {
-	Temperature   float64  `json:"temperature"`
-	FeelsLike     float64  `json:"feels_like"`
-	Humidity      float64  `json:"humidity"`
-	Precipitation float64  `json:"precipitation"`
-	Rain          float64  `json:"rain"`
-	WeatherCode   int      `json:"weather_code"`
-	WeatherLabel  *string  `json:"weather_label"`
-	WeatherIcon   *string  `json:"weather_icon"`
-	CloudCover    float64  `json:"cloud_cover"`
-	Pressure      float64  `json:"pressure"`
-	WindSpeed     float64  `json:"wind_speed"`
-	WindDirection float64  `json:"wind_direction"`
-	WindGusts     float64  `json:"wind_gusts"`
-	UVIndex       *float64 `json:"uv_index"`
-	IsDay         int      `json:"is_day"`
+	Temperature  float64  `json:"temperature"`
+	FeelsLike    float64  `json:"feels_like"`
+	Humidity     float64  `json:"humidity"`
+	Precipitation float64 `json:"precipitation"`
+	Rain         float64  `json:"rain"`
+	WeatherCode  int      `json:"weather_code"`
+	WeatherLabel *string  `json:"weather_label"`
+	WeatherIcon  *string  `json:"weather_icon"`
+	CloudCover   float64  `json:"cloud_cover"`
+	Pressure     float64  `json:"pressure"`
+	WindSpeed    float64  `json:"wind_speed"`
+	WindDirection float64 `json:"wind_direction"`
+	WindGusts    float64  `json:"wind_gusts"`
+	UVIndex      *float64 `json:"uv_index"`
+	IsDay        int      `json:"is_day"`
 }
 
 type AirQuality struct {

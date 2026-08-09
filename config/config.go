@@ -12,11 +12,11 @@ var (
 	SecretKey                 string
 	Algorithm                 string
 	AccessTokenExpiresMinutes int
-	AESSecretKey              string
+	AESSecretKey               string
 
-	MinSupportedVersion    string
-	LatestVersion          string
-	ForceUpdateMessage     = "This version of WeBAlert is no longer supported. Please update latest version to continue receiving weather and disaster alerts."
+	MinSupportedVersion string
+	LatestVersion        string
+	ForceUpdateMessage   = "This version of WeBAlert is no longer supported. Please update latest version to continue receiving weather and disaster alerts."
 	FirebaseCredentialsB64 string
 
 	// Official access code an applicant must supply at signup to be

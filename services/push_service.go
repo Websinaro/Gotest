@@ -71,11 +71,11 @@ func sendMessage(fcmToken string, data map[string]string) error {
 // returned, matching the Python function's best-effort `except Exception`.
 func SendSosPush(fcmToken string, sosID int64, senderName string, latitude, longitude float64) {
 	err := sendMessage(fcmToken, map[string]string{
-		"type":        "sos_alert",
-		"sos_id":      fmt.Sprintf("%d", sosID),
+		"type":       "sos_alert",
+		"sos_id":     fmt.Sprintf("%d", sosID),
 		"sender_name": senderName,
-		"latitude":    fmt.Sprintf("%v", latitude),
-		"longitude":   fmt.Sprintf("%v", longitude),
+		"latitude":   fmt.Sprintf("%v", latitude),
+		"longitude":  fmt.Sprintf("%v", longitude),
 	})
 	if err != nil {
 		log.Printf("[SOS PUSH ERROR] token=%s error=%v", fcmToken, err)

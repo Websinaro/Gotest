@@ -100,29 +100,44 @@ func CreateSosHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	contacts, err := getSafetyContactsForUser(user.ID)
-	if err == nil {
+	// The SOS alert itself is already committed to the DB at this point -
+	// the emergency is "sent" as far as the user is concerned. Pushing to
+	// every protector's device is best-effort notification fan-out, not
+	// part of what the caller needs to wait on, so it must NOT block this
+	// response. Previously this ran inline before writeJSON: with several
+	// protectors/devices and a slow/cold-starting FCM token fetch, the
+	// handler could take minutes to respond even though the alert had
+	// already gone active - the client would time out and show a
+	// "waking up"/error message, and pressing SOS again would then just
+	// hit the "you already have an active SOS alert" guard above. Sending
+	// pushes in a goroutine after we've already responded fixes that.
+	go func(alert models.SosAlert, senderName string) {
+		contacts, err := getSafetyContactsForUser(alert.UserID)
+		if err != nil {
+			return
+		}
 		protectors, err := findProtectorUsers(contacts)
-		if err == nil {
-			for _, protector := range protectors {
-				rows, err := database.DB.Query(`SELECT fcm_token FROM device_tokens WHERE user_id = $1`, protector.ID)
-				if err != nil {
-					continue
-				}
-				var tokens []string
-				for rows.Next() {
-					var t string
-					if rows.Scan(&t) == nil {
-						tokens = append(tokens, t)
-					}
-				}
-				rows.Close()
-				for _, token := range tokens {
-					services.SendSosPush(token, alert.ID, user.Name, alert.Latitude, alert.Longitude)
+		if err != nil {
+			return
+		}
+		for _, protector := range protectors {
+			rows, err := database.DB.Query(`SELECT fcm_token FROM device_tokens WHERE user_id = $1`, protector.ID)
+			if err != nil {
+				continue
+			}
+			var tokens []string
+			for rows.Next() {
+				var t string
+				if rows.Scan(&t) == nil {
+					tokens = append(tokens, t)
 				}
 			}
+			rows.Close()
+			for _, token := range tokens {
+				services.SendSosPush(token, alert.ID, senderName, alert.Latitude, alert.Longitude)
+			}
 		}
-	}
+	}(alert, user.Name)
 
 	writeJSON(w, http.StatusOK, sosToOut(&alert))
 }
@@ -262,30 +277,36 @@ func ResolveSosHandler(w http.ResponseWriter, r *http.Request) {
 	// app cancels the stale ongoing notification even if they don't have
 	// the live map open right now (background/killed app) - see the doc
 	// comment on SendSosResolvedPush for why this matters for notification
-	// reliability on the next SOS.
-	contacts, err := getSafetyContactsForUser(user.ID)
-	if err == nil {
+	// reliability on the next SOS. Same reasoning as CreateSosHandler: run
+	// this in the background so a slow FCM/token fetch never delays the
+	// "resolved" response back to the caller.
+	go func(ownerID, id int64) {
+		contacts, err := getSafetyContactsForUser(ownerID)
+		if err != nil {
+			return
+		}
 		protectors, err := findProtectorUsers(contacts)
-		if err == nil {
-			for _, protector := range protectors {
-				rows, err := database.DB.Query(`SELECT fcm_token FROM device_tokens WHERE user_id = $1`, protector.ID)
-				if err != nil {
-					continue
-				}
-				var tokens []string
-				for rows.Next() {
-					var t string
-					if rows.Scan(&t) == nil {
-						tokens = append(tokens, t)
-					}
-				}
-				rows.Close()
-				for _, token := range tokens {
-					services.SendSosResolvedPush(token, sosID)
+		if err != nil {
+			return
+		}
+		for _, protector := range protectors {
+			rows, err := database.DB.Query(`SELECT fcm_token FROM device_tokens WHERE user_id = $1`, protector.ID)
+			if err != nil {
+				continue
+			}
+			var tokens []string
+			for rows.Next() {
+				var t string
+				if rows.Scan(&t) == nil {
+					tokens = append(tokens, t)
 				}
 			}
+			rows.Close()
+			for _, token := range tokens {
+				services.SendSosResolvedPush(token, id)
+			}
 		}
-	}
+	}(user.ID, sosID)
 
 	writeJSON(w, http.StatusOK, sosToOut(alert))
 }

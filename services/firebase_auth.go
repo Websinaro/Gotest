@@ -132,7 +132,22 @@ func getAccessToken() (string, error) {
 	form.Set("grant_type", "urn:ietf:params:oauth:grant-type:jwt-bearer")
 	form.Set("assertion", assertion)
 
-	resp, err := http.Post(sa.TokenURI, "application/x-www-form-urlencoded", strings.NewReader(form.Encode()))
+	// IMPORTANT: must NOT use http.Post / http.DefaultClient here - that
+	// client has no timeout at all, so if this outbound call to Google's
+	// token endpoint ever stalls (flaky egress right after a Render free
+	// dyno cold-starts, etc.) this call - and the caller holding tokenMu -
+	// can hang for minutes instead of seconds. This is what was causing SOS
+	// sends to take 2-4 minutes and time out client-side even though the
+	// alert had already been created server-side. Reuse the shared
+	// httpClient (see weather_service.go), which has a 15s timeout, so a
+	// bad connection fails fast instead of hanging the whole request (and
+	// the mutex) indefinitely.
+	req, err := http.NewRequest(http.MethodPost, sa.TokenURI, strings.NewReader(form.Encode()))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return "", err
 	}
