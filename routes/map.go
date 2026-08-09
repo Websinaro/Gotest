@@ -11,18 +11,18 @@ import (
 )
 
 type districtWeatherResult struct {
-	District      string  `json:"district"`
-	Latitude      float64 `json:"latitude"`
-	Longitude     float64 `json:"longitude"`
-	Temperature   float64 `json:"temperature"`
-	Humidity      float64 `json:"humidity"`
+	District        string  `json:"district"`
+	Latitude        float64 `json:"latitude"`
+	Longitude       float64 `json:"longitude"`
+	Temperature     float64 `json:"temperature"`
+	Humidity        float64 `json:"humidity"`
 	RainProbability float64 `json:"rain_probability"`
-	WeatherCode   int     `json:"weather_code"`
-	WeatherLabel  string  `json:"weather_label"`
-	WindSpeed     float64 `json:"wind_speed"`
-	WindDirection float64 `json:"wind_direction"`
-	WindGusts     float64 `json:"wind_gusts"`
-	AlertLevel    string  `json:"alert_level"`
+	WeatherCode     int     `json:"weather_code"`
+	WeatherLabel    string  `json:"weather_label"`
+	WindSpeed       float64 `json:"wind_speed"`
+	WindDirection   float64 `json:"wind_direction"`
+	WindGusts       float64 `json:"wind_gusts"`
+	AlertLevel      string  `json:"alert_level"`
 }
 
 var mapSemaphore = make(chan struct{}, 5) // max 5 in-flight requests at once
